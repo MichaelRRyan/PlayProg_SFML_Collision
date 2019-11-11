@@ -159,8 +159,8 @@ int main() {
 		cpcCircle.p.y = rand() % 10 + 1;
 
 		// Circle-point Collision
-		if (playerBox.p.x + playerBox.w > npcBox.p.x && playerBox.p.x < npcBox.p.x + npcBox.w // Horizontal.
-			&& playerBox.p.y + playerBox.h > npcBox.p.y && playerBox.p.y < npcBox.p.y + npcBox.h) // Vertical
+		if (playerBox.p.x + playerBox.w >= npcBox.p.x && playerBox.p.x <= npcBox.p.x + npcBox.w // Horizontal.
+			&& playerBox.p.y + playerBox.h >= npcBox.p.y && playerBox.p.y <= npcBox.p.y + npcBox.h) // Vertical
 		{
 			std::cout << "Box Collision" << std::endl;
 		}
