@@ -18,6 +18,40 @@ enum class DebugView
 	BoundingOnly // Only show bounding rectangles
 };
 
+struct Capsule
+{
+	sf::RectangleShape m_body;
+	sf::CircleShape m_top;
+	sf::CircleShape m_bottom;
+
+	void setup(sf::Vector2f t_bodySize, sf::Vector2f t_bodyPosition)
+	{
+		// Change these two to change the capsule
+		m_body.setSize(t_bodySize);
+		m_body.setPosition(t_bodyPosition);
+
+		// Don't touch these
+		m_top.setRadius(t_bodySize.x / 2.0f);
+		m_top.setPosition(t_bodyPosition.x, t_bodyPosition.y - m_top.getRadius());
+		m_bottom.setRadius(t_bodySize.x / 2.0f);
+		m_bottom.setPosition(t_bodyPosition.x, t_bodyPosition.y + t_bodySize.y - m_top.getRadius());
+	}
+
+	void setColor(sf::Color t_color)
+	{
+		m_body.setFillColor(t_color);
+		m_top.setFillColor(t_color);
+		m_bottom.setFillColor(t_color);
+	}
+
+	void draw(sf::RenderWindow& t_window)
+	{
+		t_window.draw(m_body);
+		t_window.draw(m_top);
+		t_window.draw(m_bottom);
+	}
+};
+
 int main()
 {
 	// Create the main window
@@ -76,6 +110,29 @@ int main()
 	c2AABB aabb_player;
 	aabb_player.min = c2V(player.getAnimatedSprite().getPosition().x, player.getAnimatedSprite().getPosition().y);
 	aabb_player.max = c2V(player.getAnimatedSprite().getGlobalBounds().width / 6, player.getAnimatedSprite().getGlobalBounds().width / 6);
+
+	////////////////////////////////////////////////////////////////////////////////
+	/// CAPSULE
+	////////////////////////////////////////////////////////////////////////////////
+	Capsule visualCapsule;
+	visualCapsule.setup({ 80.0f, 50.0f }, { 100.0f, 100.0f });
+
+	c2Capsule collisionCapsule;
+	collisionCapsule.a.x = visualCapsule.m_body.getPosition().x + visualCapsule.m_top.getRadius();
+	collisionCapsule.a.y = visualCapsule.m_body.getPosition().y;
+
+	collisionCapsule.b.x = visualCapsule.m_body.getPosition().x + visualCapsule.m_top.getRadius();
+	collisionCapsule.b.y = visualCapsule.m_body.getPosition().y + visualCapsule.m_body.getSize().y;
+
+	collisionCapsule.r = visualCapsule.m_top.getRadius();
+
+	////////////////////////////////////////////////////////////////////////////////
+	/// Polygon
+	////////////////////////////////////////////////////////////////////////////////
+	sf::CircleShape traingle;
+	c2Poly collisionTriangle;
+	collisionTriangle.count = 3;
+	//collisionTriangle.verts
 
 	// Initialize Input
 	Input input;
@@ -210,6 +267,29 @@ int main()
 		npc.update();
 
 		// Check for collisions
+		// Check for AABB to Capsule collisions
+		result = c2AABBtoCapsule(aabb_player, collisionCapsule);
+		if (result)
+		{
+			visualCapsule.setColor(sf::Color(255, 0, 0));
+		}
+		else
+		{
+			visualCapsule.setColor(sf::Color(255, 255, 255));
+		}
+
+		//// Check for AABB to Triangle collisions
+		//result = c2AABBtoPoly(aabb_player, collisionCapsule);
+		//if (result)
+		//{
+		//	visualCapsule.setColor(sf::Color(255, 0, 0));
+		//}
+		//else
+		//{
+		//	visualCapsule.setColor(sf::Color(255, 255, 255));
+		//}
+
+		// Check for AABB to AABB collisions
 		result = c2AABBtoAABB(aabb_player, aabb_npc);
 		if (result){
 			//player.getAnimatedSprite().setColor(sf::Color(255,0,0));
@@ -225,6 +305,9 @@ int main()
 
 		// Clear screen
 		window.clear();
+
+		// Draw shapes
+		visualCapsule.draw(window);
 
 #ifdef _DEBUG
 		if (m_debugView != DebugView::BoundingOnly)
