@@ -11,6 +11,13 @@
 
 using namespace std;
 
+enum class DebugView
+{
+	Default, // Show only the sprites
+	Debug, // Show both bounding rectangle and sprites
+	BoundingOnly // Only show bounding rectangles
+};
+
 int main()
 {
 	// Create the main window
@@ -54,6 +61,8 @@ int main()
 	// Setup the Player
 	GameObject &player = Player(player_animated_sprite);
 
+	sf::Vector2f playerOffset{ player.getAnimatedSprite().getGlobalBounds().width / 2.0f, player.getAnimatedSprite().getGlobalBounds().height / 2.0f };
+
 	//Setup NPC AABB
 	c2AABB aabb_npc;
 	aabb_npc.min = c2V(npc.getAnimatedSprite().getPosition().x, npc.getAnimatedSprite().getPosition().y);
@@ -68,7 +77,6 @@ int main()
 	aabb_player.min = c2V(player.getAnimatedSprite().getPosition().x, player.getAnimatedSprite().getPosition().y);
 	aabb_player.max = c2V(player.getAnimatedSprite().getGlobalBounds().width / 6, player.getAnimatedSprite().getGlobalBounds().width / 6);
 
-
 	// Initialize Input
 	Input input;
 
@@ -76,35 +84,50 @@ int main()
 	int result = 0;
 
 	// Direction of movement of NPC
-	sf::Vector2f direction(0.1f, 0.2f);
+	sf::Vector2f direction(0.707f, 0.707f);
+	float speed{ 0.1f };
 	
+	DebugView m_debugView{ DebugView::Default };
+
+	sf::Font font;
+	sf::Text debugText;
+
+	if (!font.loadFromFile("assets/arial.ttf"))
+	{
+		std::cout << "Error loading font" << std::endl;
+	}
+
+	debugText.setFont(font);
+	debugText.setString("Press D to toggle through debug modes");
+	debugText.setCharacterSize(25);
+
 	// Start the game loop
 	while (window.isOpen())
 	{
 		// Move Sprite Follow Mouse
-		player.getAnimatedSprite().setPosition(window.mapPixelToCoords(sf::Mouse::getPosition(window)));
+		player.getAnimatedSprite().setPosition(window.mapPixelToCoords(sf::Mouse::getPosition(window)) - playerOffset);
 		
 		// Move The NPC
-		sf::Vector2f move_to(npc.getAnimatedSprite().getPosition().x + direction.x, npc.getAnimatedSprite().getPosition().y + direction.y);
+		sf::Sprite& npcSprite = npc.getAnimatedSprite();
 
-		if (move_to.x < 0) {
+		if (npcSprite.getPosition().x < 0) {
 			direction.x *= -1;
-			move_to.x = 0;
+			npcSprite.setPosition(0.0f, npcSprite.getPosition().y);
 		}
-		else if (move_to.x + npc.getAnimatedSprite().getGlobalBounds().width >= 800) { 
+		else if (npcSprite.getPosition().x + npc.getAnimatedSprite().getGlobalBounds().width >= 800) {
 			direction.x *= -1;
-			move_to.x = 800 - npc.getAnimatedSprite().getGlobalBounds().width;
+			npcSprite.setPosition(800 - npcSprite.getGlobalBounds().width, npcSprite.getPosition().y);
 		}
-		else if (move_to.y < 0) { 
+		else if (npcSprite.getPosition().y < 0) {
 			direction.y *= -1;
-			move_to.y = 0;
+			npcSprite.setPosition(npcSprite.getPosition().x, 0.0f);
 		}
-		else if (move_to.y + npc.getAnimatedSprite().getGlobalBounds().height >= 600) {
+		else if (npcSprite.getPosition().y + npc.getAnimatedSprite().getGlobalBounds().height >= 600) {
 			direction.y *= -1;
-			move_to.y = 600 - npc.getAnimatedSprite().getGlobalBounds().height;
+			npcSprite.setPosition(npcSprite.getPosition().x, 600 - npcSprite.getGlobalBounds().height);
 		}
 		
-		npc.getAnimatedSprite().setPosition(move_to);
+		npc.getAnimatedSprite().move(direction * speed);
 
 		// Update NPC AABB set x and y
 		aabb_npc.min = c2V(
@@ -154,6 +177,22 @@ int main()
 				{
 					input.setCurrent(Input::Action::UP);
 				}
+
+				if (sf::Keyboard::D == event.key.code)
+				{
+					switch (m_debugView)
+					{
+					case DebugView::Default:
+						m_debugView = DebugView::Debug;
+						break;
+					case DebugView::Debug:
+						m_debugView = DebugView::BoundingOnly;
+						break;
+					case DebugView::BoundingOnly:
+						m_debugView = DebugView::Default;
+						break;
+					}
+				}
 				break;
 			default:
 				input.setCurrent(Input::Action::IDLE);
@@ -173,21 +212,45 @@ int main()
 		// Check for collisions
 		result = c2AABBtoAABB(aabb_player, aabb_npc);
 		if (result){
-			player.getAnimatedSprite().setColor(sf::Color(255,0,0));
-			cout << "Collision" << endl;
+			//player.getAnimatedSprite().setColor(sf::Color(255,0,0));
+			player.getBoundingRect().setOutlineColor(sf::Color(255, 0, 0));
+			npc.getBoundingRect().setOutlineColor(sf::Color(255, 0, 0));
+			//cout << "Collision" << endl;
 		}
 		else {
-			player.getAnimatedSprite().setColor(sf::Color(0, 255, 0));
+			//player.getAnimatedSprite().setColor(sf::Color(0, 255, 0));
+			player.getBoundingRect().setOutlineColor(sf::Color(0, 255, 0));
+			npc.getBoundingRect().setOutlineColor(sf::Color(0, 255, 0));
 		}
 
 		// Clear screen
 		window.clear();
 
-		// Draw the Players Current Animated Sprite
-		window.draw(player.getAnimatedSprite());
+#ifdef _DEBUG
+		if (m_debugView != DebugView::BoundingOnly)
+#endif // _DEBUG
+		{
+			// Draw the Players Current Animated Sprite
+			window.draw(player.getAnimatedSprite());
 
-		// Draw the NPC's Current Animated Sprite
-		window.draw(npc.getAnimatedSprite());
+			// Draw the NPC's Current Animated Sprite
+			window.draw(npc.getAnimatedSprite());
+		}
+
+#ifdef _DEBUG
+		if (m_debugView == DebugView::BoundingOnly
+			|| m_debugView == DebugView::Debug)
+		{
+			// Draw the Player's Current Bounding Rect
+			window.draw(player.getBoundingRect());
+
+			// Draw the NPC's Current Bounding Rect
+			window.draw(npc.getBoundingRect());
+		}
+
+		window.draw(debugText);
+#endif // _DEBUG
+
 
 		// Update the window
 		window.display();

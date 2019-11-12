@@ -4,18 +4,21 @@
 #include <Input.h>
 #include <PlayerFSM.h>
 #include <AnimatedSprite.h>
+#include <SFML/Graphics.hpp>
 
 class GameObject
 {
 protected:
 	PlayerFSM m_player_fsm;
 	AnimatedSprite m_animated_sprite;
+	sf::RectangleShape m_boundingRect;
 	GameObject();
 	GameObject(const AnimatedSprite&);
 
 public:
 	virtual ~GameObject() = 0;
 	virtual AnimatedSprite& getAnimatedSprite() = 0;
+	virtual sf::RectangleShape &getBoundingRect() = 0;
 	virtual void handleInput(Input) = 0;
 	virtual void update() = 0;
 };

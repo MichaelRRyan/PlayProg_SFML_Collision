@@ -14,6 +14,7 @@ public:
 	~Player();
 	Player(const AnimatedSprite&);
 	AnimatedSprite& getAnimatedSprite();
+	sf::RectangleShape &getBoundingRect();
 	void handleInput(Input);
 	void update();
 };
