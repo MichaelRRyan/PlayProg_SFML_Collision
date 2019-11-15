@@ -130,9 +130,22 @@ int main()
 	/// Polygon
 	////////////////////////////////////////////////////////////////////////////////
 	sf::CircleShape traingle;
-	c2Poly collisionTriangle;
-	collisionTriangle.count = 3;
-	//collisionTriangle.verts
+	traingle.setPointCount(3);
+	traingle.setRadius(50);
+	traingle.setPosition(300.0f, 100.0f);
+
+	sf::VertexArray polygonShape{ sf::Triangles, 3 };
+	polygonShape.append({ { traingle.getPosition().x + traingle.getRadius(), traingle.getPosition().y }, sf::Color::White });
+	polygonShape.append({ { traingle.getPosition().x + traingle.getRadius() * 2.0f, traingle.getPosition().y + traingle.getRadius() * 2.0f }, sf::Color::White });
+	polygonShape.append({ { traingle.getPosition().x, traingle.getPosition().y + traingle.getRadius() * 2.0f }, sf::Color::White });
+
+
+	c2Poly collisionPolygon;
+	collisionPolygon.count = 3;
+
+	collisionPolygon.verts[0] = c2v{ traingle.getPosition().x + traingle.getRadius(), traingle.getPosition().y };
+	collisionPolygon.verts[1] = c2v{ traingle.getPosition().x + traingle.getRadius() * 2.0f, traingle.getPosition().y + traingle.getRadius() * 2.0f };
+	collisionPolygon.verts[2] = c2v{ traingle.getPosition().x, traingle.getPosition().y + traingle.getRadius() * 2.0f };
 
 	// Initialize Input
 	Input input;
@@ -278,16 +291,21 @@ int main()
 			visualCapsule.setColor(sf::Color(255, 255, 255));
 		}
 
-		//// Check for AABB to Triangle collisions
-		//result = c2AABBtoPoly(aabb_player, collisionCapsule);
-		//if (result)
-		//{
-		//	visualCapsule.setColor(sf::Color(255, 0, 0));
-		//}
-		//else
-		//{
-		//	visualCapsule.setColor(sf::Color(255, 255, 255));
-		//}
+		// Check for AABB to Triangle collisions
+		result = c2AABBtoPoly(aabb_player, &collisionPolygon, NULL);
+		if (result)
+		{
+			std::cout << "Polygon Collision" << std::endl;
+			polygonShape[0].color = sf::Color(255, 0, 0);
+			polygonShape[1].color = sf::Color(255, 0, 0);
+			polygonShape[2].color = sf::Color(255, 0, 0);
+		}
+		else
+		{
+			polygonShape[0].color = sf::Color(255, 255, 255);
+			polygonShape[1].color = sf::Color(255, 255, 255);
+			polygonShape[2].color = sf::Color(255, 255, 255);
+		}
 
 		// Check for AABB to AABB collisions
 		result = c2AABBtoAABB(aabb_player, aabb_npc);
@@ -308,6 +326,8 @@ int main()
 
 		// Draw shapes
 		visualCapsule.draw(window);
+
+		window.draw(polygonShape);
 
 #ifdef _DEBUG
 		if (m_debugView != DebugView::BoundingOnly)
