@@ -29,7 +29,8 @@ enum class GameState
 enum class Shapes
 {
 	Rectangle,
-	Circle
+	Circle,
+	Ray
 };
 
 struct Capsule
@@ -152,6 +153,7 @@ int main()
 	{
 		collisionPolygon.verts[i] = { polygonShape.getPointPosition(i).x, polygonShape.getPointPosition(i).y };
 	}
+	c2MakePoly(&collisionPolygon);
 
 	////////////////////////////////////////////////////////////////////////////////
 	/// Ray
@@ -164,8 +166,6 @@ int main()
 	collisionRay.t = ray.getDistance();
 
 	c2Raycast raycast;
-	raycast.n = { 0, 0 };
-	raycast.t = 0;
 
 	////////////////////////////////////////////////////////////////////////////////
 	/// Circle
@@ -213,7 +213,7 @@ int main()
 	}
 
 	debugText.setFont(font);
-	debugText.setString("Press D to toggle through debug modes");
+	debugText.setString("Press M to switch between game states\nPress D to toggle through debug modes");
 	debugText.setCharacterSize(25);
 
 	// Start the game loop
@@ -241,6 +241,13 @@ int main()
 		{
 			circleShape.setPosition(window.mapPixelToCoords(sf::Mouse::getPosition(window)));
 			collisionCircle.p = { circleShape.getPosition().x, circleShape.getPosition().y };
+		}
+		else if (m_selectedShape == Shapes::Ray)
+		{
+			ray.setEndPoint(window.mapPixelToCoords(sf::Mouse::getPosition(window)));
+			collisionRay.p = { ray.getStartPoint().x, ray.getStartPoint().y };
+			collisionRay.d = { ray.getDirection().x, ray.getDirection().y };
+			collisionRay.t = ray.getDistance();
 		}
 		
 		
@@ -325,11 +332,13 @@ int main()
 					{
 					case GameState::BouncingRect:
 						m_gameState = GameState::CollisionTests;
+						debugText.setString("Press M to switch between game states\nPress S to change selected shape");
 						break;
 					case GameState::CollisionTests:
 						m_gameState = GameState::BouncingRect;
 						player.getBoundingRect().setOutlineThickness(-4.0f);
 						player.getBoundingRect().setFillColor(sf::Color::Transparent);
+						debugText.setString("Press M to switch between game states\nPress D to toggle through debug modes");
 						break;
 					}
 
@@ -361,9 +370,19 @@ int main()
 
 						break;
 					case Shapes::Circle:
+						m_selectedShape = Shapes::Ray;
+						ray.setStartPoint({ 400.0f, 300.0f });
+						break;
+					case Shapes::Ray:
 						m_selectedShape = Shapes::Rectangle;
 						player.getBoundingRect().setOutlineThickness(-4.0f);
 						player.getBoundingRect().setFillColor(sf::Color::Transparent);
+
+						ray.setStartPoint({ 500.0f, 100.0f });
+						ray.setEndPoint({ 600.0f, 200.0f });
+						collisionRay.p = { ray.getStartPoint().x, ray.getStartPoint().y };
+						collisionRay.d = { ray.getDirection().x, ray.getDirection().y };
+						collisionRay.t = ray.getDistance();
 						break;
 					}
 				}
@@ -477,6 +496,52 @@ int main()
 					stationaryCircleShape.setFillColor(sf::Color::White);
 				}
 			}
+			else if (m_selectedShape == Shapes::Ray)
+			{
+				// Check for Ray to AABB collisions
+				result = c2RaytoAABB(collisionRay, aabb_player, &raycast);
+				if (result)
+				{
+					player.getBoundingRect().setFillColor(sf::Color::Red);
+				}
+				else
+				{
+					player.getBoundingRect().setFillColor(sf::Color::White);
+				}
+
+				// Check for Ray to Capsule collisions
+				result = c2RaytoCapsule(collisionRay, collisionCapsule, &raycast);
+				if (result)
+				{
+					visualCapsule.setColor(sf::Color(255, 0, 0));
+				}
+				else
+				{
+					visualCapsule.setColor(sf::Color(255, 255, 255));
+				}
+
+				// Check for Ray to Circle collisions
+				result = c2RaytoCircle(collisionRay, stationaryCollisionCircle, &raycast);
+				if (result)
+				{
+					stationaryCircleShape.setFillColor(sf::Color::Red);
+				}
+				else
+				{
+					stationaryCircleShape.setFillColor(sf::Color::White);
+				}
+
+				// Check for Ray to Polygon collisions
+				result = c2RaytoPoly(collisionRay, &collisionPolygon, &c2xIdentity(), &raycast);
+				if (result)
+				{
+					polygonShape.setColor(sf::Color::Red);
+				}
+				else
+				{
+					polygonShape.setColor(sf::Color::White);
+				}
+			}
 		}
 		else if (m_gameState == GameState::BouncingRect)
 		{
@@ -511,6 +576,10 @@ int main()
 				window.draw(circleShape);
 				window.draw(stationaryCircleShape);
 			}
+			else if (m_selectedShape == Shapes::Ray)
+			{
+				window.draw(stationaryCircleShape);
+			}
 		}
 		else if (m_gameState == GameState::BouncingRect)
 		{
@@ -536,10 +605,11 @@ int main()
 				window.draw(npc.getBoundingRect());
 			}
 
-			window.draw(debugText);
+			
 #endif // _DEBUG
 		}
 
+		window.draw(debugText);
 
 		// Update the window
 		window.display();

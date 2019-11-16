@@ -7,10 +7,14 @@ class RayLine
 public:
 	RayLine(sf::Vector2f t_start, sf::Vector2f t_end);
 	void draw(sf::RenderWindow& t_window);
+
 	sf::Vector2f getStartPoint() const;
 	sf::Vector2f getDirection() const;
 	float getDistance() const;
+
 	void setColor(sf::Color t_color);
+	void setStartPoint(sf::Vector2f t_position);
+	void setEndPoint(sf::Vector2f t_position);
 
 private:
 	sf::VertexArray m_line{ sf::Lines };
