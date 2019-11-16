@@ -8,7 +8,7 @@ NPC::NPC() : GameObject()
 	m_player_fsm.setCurrent(new Idle());
 	m_player_fsm.setPrevious(new Idle());
 
-	m_boundingRect.setOutlineThickness(4.0f);
+	m_boundingRect.setOutlineThickness(-4.0f);
 	m_boundingRect.setFillColor(sf::Color::Transparent);
 	m_boundingRect.setOutlineColor(sf::Color::Green);
 }
@@ -18,7 +18,7 @@ NPC::NPC(const AnimatedSprite& s) : GameObject(s)
 	m_player_fsm.setCurrent(new Idle());
 	m_player_fsm.setPrevious(new Idle());
 
-	m_boundingRect.setOutlineThickness(4.0f);
+	m_boundingRect.setOutlineThickness(-4.0f);
 	m_boundingRect.setFillColor(sf::Color::Transparent);
 	m_boundingRect.setOutlineColor(sf::Color::Green);
 }

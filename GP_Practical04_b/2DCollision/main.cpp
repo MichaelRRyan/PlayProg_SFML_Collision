@@ -8,6 +8,8 @@
 #include <NPC.h>
 #include <Input.h>
 #include <Debug.h>
+#include <PolygonShape.h>
+#include <RayLine.h>
 
 using namespace std;
 
@@ -16,6 +18,18 @@ enum class DebugView
 	Default, // Show only the sprites
 	Debug, // Show both bounding rectangle and sprites
 	BoundingOnly // Only show bounding rectangles
+};
+
+enum class GameState
+{
+	BouncingRect,
+	CollisionTests
+};
+
+enum class Shapes
+{
+	Rectangle,
+	Circle
 };
 
 struct Capsule
@@ -129,23 +143,52 @@ int main()
 	////////////////////////////////////////////////////////////////////////////////
 	/// Polygon
 	////////////////////////////////////////////////////////////////////////////////
-	sf::CircleShape traingle;
-	traingle.setPointCount(3);
-	traingle.setRadius(50);
-	traingle.setPosition(300.0f, 100.0f);
-
-	sf::VertexArray polygonShape{ sf::Triangles, 3 };
-	polygonShape.append({ { traingle.getPosition().x + traingle.getRadius(), traingle.getPosition().y }, sf::Color::White });
-	polygonShape.append({ { traingle.getPosition().x + traingle.getRadius() * 2.0f, traingle.getPosition().y + traingle.getRadius() * 2.0f }, sf::Color::White });
-	polygonShape.append({ { traingle.getPosition().x, traingle.getPosition().y + traingle.getRadius() * 2.0f }, sf::Color::White });
-
+	PolygonShape polygonShape{ {300.0f, 100.0f}, {100.0f, 100.0f} };
 
 	c2Poly collisionPolygon;
 	collisionPolygon.count = 3;
 
-	collisionPolygon.verts[0] = c2v{ traingle.getPosition().x + traingle.getRadius(), traingle.getPosition().y };
-	collisionPolygon.verts[1] = c2v{ traingle.getPosition().x + traingle.getRadius() * 2.0f, traingle.getPosition().y + traingle.getRadius() * 2.0f };
-	collisionPolygon.verts[2] = c2v{ traingle.getPosition().x, traingle.getPosition().y + traingle.getRadius() * 2.0f };
+	for (int i = 0; i < 3; i++)
+	{
+		collisionPolygon.verts[i] = { polygonShape.getPointPosition(i).x, polygonShape.getPointPosition(i).y };
+	}
+
+	////////////////////////////////////////////////////////////////////////////////
+	/// Ray
+	////////////////////////////////////////////////////////////////////////////////
+	RayLine ray({ 500.0f, 100.0f }, { 600.0f, 200.0f });
+
+	c2Ray collisionRay;
+	collisionRay.p = { ray.getStartPoint().x, ray.getStartPoint().y };
+	collisionRay.d = { ray.getDirection().x, ray.getDirection().y };
+	collisionRay.t = ray.getDistance();
+
+	c2Raycast raycast;
+	raycast.n = { 0, 0 };
+	raycast.t = 0;
+
+	////////////////////////////////////////////////////////////////////////////////
+	/// Circle
+	////////////////////////////////////////////////////////////////////////////////
+	sf::CircleShape circleShape;
+	circleShape.setRadius(40);
+	circleShape.setOrigin(circleShape.getRadius(), circleShape.getRadius());
+	circleShape.setOutlineThickness(-4.0f);
+	circleShape.setOutlineColor(sf::Color::Green);
+	circleShape.setFillColor(sf::Color::Transparent);
+
+	c2Circle collisionCircle;
+	collisionCircle.r = circleShape.getRadius();
+	
+
+	sf::CircleShape stationaryCircleShape;
+	stationaryCircleShape.setRadius(40);
+	stationaryCircleShape.setOrigin(circleShape.getRadius(), circleShape.getRadius());
+	stationaryCircleShape.setPosition(500.0f, 440.0f);
+
+	c2Circle stationaryCollisionCircle;
+	stationaryCollisionCircle.r = stationaryCircleShape.getRadius();
+	stationaryCollisionCircle.p = { stationaryCircleShape.getPosition().x, stationaryCircleShape.getPosition().y };
 
 	// Initialize Input
 	Input input;
@@ -158,6 +201,8 @@ int main()
 	float speed{ 0.1f };
 	
 	DebugView m_debugView{ DebugView::Default };
+	GameState m_gameState{ GameState::BouncingRect };
+	Shapes m_selectedShape{ Shapes::Rectangle };
 
 	sf::Font font;
 	sf::Text debugText;
@@ -175,7 +220,29 @@ int main()
 	while (window.isOpen())
 	{
 		// Move Sprite Follow Mouse
-		player.getAnimatedSprite().setPosition(window.mapPixelToCoords(sf::Mouse::getPosition(window)) - playerOffset);
+		if (m_selectedShape == Shapes::Rectangle
+			|| m_gameState == GameState::BouncingRect)
+		{
+			player.getAnimatedSprite().setPosition(window.mapPixelToCoords(sf::Mouse::getPosition(window)) - playerOffset);
+
+			// Update Player AABB
+			aabb_player.min = c2V(
+				player.getAnimatedSprite().getPosition().x,
+				player.getAnimatedSprite().getPosition().y
+			);
+			aabb_player.max = c2V(
+				player.getAnimatedSprite().getPosition().x +
+				player.getAnimatedSprite().getGlobalBounds().width,
+				player.getAnimatedSprite().getPosition().y +
+				player.getAnimatedSprite().getGlobalBounds().height
+			);
+		}
+		else if (m_selectedShape == Shapes::Circle)
+		{
+			circleShape.setPosition(window.mapPixelToCoords(sf::Mouse::getPosition(window)));
+			collisionCircle.p = { circleShape.getPosition().x, circleShape.getPosition().y };
+		}
+		
 		
 		// Move The NPC
 		sf::Sprite& npcSprite = npc.getAnimatedSprite();
@@ -212,18 +279,6 @@ int main()
 			npc.getAnimatedSprite().getGlobalBounds().height
 		);
 
-		// Update Player AABB
-		aabb_player.min = c2V(
-			player.getAnimatedSprite().getPosition().x, 
-			player.getAnimatedSprite().getPosition().y
-		);
-		aabb_player.max = c2V(
-			player.getAnimatedSprite().getPosition().x +
-			player.getAnimatedSprite().getGlobalBounds().width, 
-			player.getAnimatedSprite().getPosition().y + 
-			player.getAnimatedSprite().getGlobalBounds().height
-		);
-
 		// Process events
 		sf::Event event;
 		while (window.pollEvent(event))
@@ -248,7 +303,8 @@ int main()
 					input.setCurrent(Input::Action::UP);
 				}
 
-				if (sf::Keyboard::D == event.key.code)
+				if (sf::Keyboard::D == event.key.code
+					&& m_gameState == GameState::BouncingRect)
 				{
 					switch (m_debugView)
 					{
@@ -260,6 +316,54 @@ int main()
 						break;
 					case DebugView::BoundingOnly:
 						m_debugView = DebugView::Default;
+						break;
+					}
+				}
+				if (sf::Keyboard::M == event.key.code)
+				{
+					switch (m_gameState)
+					{
+					case GameState::BouncingRect:
+						m_gameState = GameState::CollisionTests;
+						break;
+					case GameState::CollisionTests:
+						m_gameState = GameState::BouncingRect;
+						player.getBoundingRect().setOutlineThickness(-4.0f);
+						player.getBoundingRect().setFillColor(sf::Color::Transparent);
+						break;
+					}
+
+					m_selectedShape = Shapes::Rectangle;
+					m_debugView = DebugView::Default;
+					player.getBoundingRect().setOutlineColor(sf::Color::Green);
+				}
+				if (sf::Keyboard::S == event.key.code
+					&& m_gameState == GameState::CollisionTests)
+				{
+					switch (m_selectedShape)
+					{
+					case Shapes::Rectangle:
+						m_selectedShape = Shapes::Circle;
+						player.getBoundingRect().setOutlineThickness(0.0f);
+						player.getAnimatedSprite().setPosition(200.0f, 400.0f);
+
+						// Update Player AABB
+						aabb_player.min = c2V(
+							player.getAnimatedSprite().getPosition().x,
+							player.getAnimatedSprite().getPosition().y
+						);
+						aabb_player.max = c2V(
+							player.getAnimatedSprite().getPosition().x +
+							player.getAnimatedSprite().getGlobalBounds().width,
+							player.getAnimatedSprite().getPosition().y +
+							player.getAnimatedSprite().getGlobalBounds().height
+						);
+
+						break;
+					case Shapes::Circle:
+						m_selectedShape = Shapes::Rectangle;
+						player.getBoundingRect().setOutlineThickness(-4.0f);
+						player.getBoundingRect().setFillColor(sf::Color::Transparent);
 						break;
 					}
 				}
@@ -280,79 +384,161 @@ int main()
 		npc.update();
 
 		// Check for collisions
-		// Check for AABB to Capsule collisions
-		result = c2AABBtoCapsule(aabb_player, collisionCapsule);
-		if (result)
+		if (m_gameState == GameState::CollisionTests)
 		{
-			visualCapsule.setColor(sf::Color(255, 0, 0));
-		}
-		else
-		{
-			visualCapsule.setColor(sf::Color(255, 255, 255));
-		}
+			if (m_selectedShape == Shapes::Rectangle)
+			{
+				// Check for AABB to Capsule collisions
+				result = c2AABBtoCapsule(aabb_player, collisionCapsule);
+				if (result)
+				{
+					visualCapsule.setColor(sf::Color(255, 0, 0));
+				}
+				else
+				{
+					visualCapsule.setColor(sf::Color(255, 255, 255));
+				}
 
-		// Check for AABB to Triangle collisions
-		result = c2AABBtoPoly(aabb_player, &collisionPolygon, NULL);
-		if (result)
-		{
-			std::cout << "Polygon Collision" << std::endl;
-			polygonShape[0].color = sf::Color(255, 0, 0);
-			polygonShape[1].color = sf::Color(255, 0, 0);
-			polygonShape[2].color = sf::Color(255, 0, 0);
-		}
-		else
-		{
-			polygonShape[0].color = sf::Color(255, 255, 255);
-			polygonShape[1].color = sf::Color(255, 255, 255);
-			polygonShape[2].color = sf::Color(255, 255, 255);
-		}
+				// Check for AABB to Triangle collisions
+				result = c2AABBtoPoly(aabb_player, &collisionPolygon, NULL);
+				if (result)
+				{
+					polygonShape.setColor(sf::Color::Red);
+				}
+				else
+				{
+					polygonShape.setColor(sf::Color::White);
+				}
 
-		// Check for AABB to AABB collisions
-		result = c2AABBtoAABB(aabb_player, aabb_npc);
-		if (result){
-			//player.getAnimatedSprite().setColor(sf::Color(255,0,0));
-			player.getBoundingRect().setOutlineColor(sf::Color(255, 0, 0));
-			npc.getBoundingRect().setOutlineColor(sf::Color(255, 0, 0));
-			//cout << "Collision" << endl;
+				// Check for AABB to Ray collisions
+				result = c2CastRay(collisionRay, &aabb_player, 0, C2_AABB, &raycast);
+				if (result)
+				{
+					ray.setColor(sf::Color::Red);
+				}
+				else
+				{
+					ray.setColor(sf::Color::White);
+				}
+			}
+			else if (m_selectedShape == Shapes::Circle)
+			{
+				// Check for Circle to AABB collisions
+				if (c2CircletoAABB(collisionCircle, aabb_player))
+				{
+					player.getBoundingRect().setFillColor(sf::Color::Red);
+				}
+				else
+				{
+					player.getBoundingRect().setFillColor(sf::Color::White);
+				}
+
+				// Check for Circle to Ray collisions
+				result = c2CastRay(collisionRay, &collisionCircle, 0, C2_CIRCLE, &raycast);
+				if (result)
+				{
+					ray.setColor(sf::Color::Red);
+				}
+				else
+				{
+					ray.setColor(sf::Color::White);
+				}
+
+				// Check for AABB to Capsule collisions
+				result = c2CircletoCapsule(collisionCircle, collisionCapsule);
+				if (result)
+				{
+					visualCapsule.setColor(sf::Color(255, 0, 0));
+				}
+				else
+				{
+					visualCapsule.setColor(sf::Color(255, 255, 255));
+				}
+
+				// Check for AABB to Triangle collisions
+				result = c2CircletoPoly(collisionCircle, &collisionPolygon, NULL);
+				if (result)
+				{
+					polygonShape.setColor(sf::Color::Red);
+				}
+				else
+				{
+					polygonShape.setColor(sf::Color::White);
+				}
+
+				// Check for AABB to Triangle collisions
+				result = c2CircletoCircle(collisionCircle, stationaryCollisionCircle);
+				if (result)
+				{
+					stationaryCircleShape.setFillColor(sf::Color::Red);
+				}
+				else
+				{
+					stationaryCircleShape.setFillColor(sf::Color::White);
+				}
+			}
 		}
-		else {
-			//player.getAnimatedSprite().setColor(sf::Color(0, 255, 0));
-			player.getBoundingRect().setOutlineColor(sf::Color(0, 255, 0));
-			npc.getBoundingRect().setOutlineColor(sf::Color(0, 255, 0));
+		else if (m_gameState == GameState::BouncingRect)
+		{
+			// Check for AABB to AABB collisions
+			result = c2AABBtoAABB(aabb_player, aabb_npc);
+			if (result) {
+				//player.getAnimatedSprite().setColor(sf::Color(255,0,0));
+				player.getBoundingRect().setOutlineColor(sf::Color(255, 0, 0));
+				npc.getBoundingRect().setOutlineColor(sf::Color(255, 0, 0));
+				//cout << "Collision" << endl;
+			}
+			else {
+				//player.getAnimatedSprite().setColor(sf::Color(0, 255, 0));
+				player.getBoundingRect().setOutlineColor(sf::Color(0, 255, 0));
+				npc.getBoundingRect().setOutlineColor(sf::Color(0, 255, 0));
+			}
 		}
 
 		// Clear screen
 		window.clear();
 
-		// Draw shapes
-		visualCapsule.draw(window);
-
-		window.draw(polygonShape);
-
-#ifdef _DEBUG
-		if (m_debugView != DebugView::BoundingOnly)
-#endif // _DEBUG
+		if (m_gameState == GameState::CollisionTests)
 		{
-			// Draw the Players Current Animated Sprite
-			window.draw(player.getAnimatedSprite());
-
-			// Draw the NPC's Current Animated Sprite
-			window.draw(npc.getAnimatedSprite());
-		}
-
-#ifdef _DEBUG
-		if (m_debugView == DebugView::BoundingOnly
-			|| m_debugView == DebugView::Debug)
-		{
-			// Draw the Player's Current Bounding Rect
+			// Draw shapes
+			visualCapsule.draw(window);
+			polygonShape.draw(window);
+			ray.draw(window);
 			window.draw(player.getBoundingRect());
 
-			// Draw the NPC's Current Bounding Rect
-			window.draw(npc.getBoundingRect());
+			if (m_selectedShape == Shapes::Circle)
+			{
+				window.draw(circleShape);
+				window.draw(stationaryCircleShape);
+			}
 		}
-
-		window.draw(debugText);
+		else if (m_gameState == GameState::BouncingRect)
+		{
+#ifdef _DEBUG
+			if (m_debugView != DebugView::BoundingOnly)
 #endif // _DEBUG
+			{
+				// Draw the Players Current Animated Sprite
+				window.draw(player.getAnimatedSprite());
+
+				// Draw the NPC's Current Animated Sprite
+				window.draw(npc.getAnimatedSprite());
+			}
+
+#ifdef _DEBUG
+			if (m_debugView == DebugView::BoundingOnly
+				|| m_debugView == DebugView::Debug)
+			{
+				// Draw the Player's Current Bounding Rect
+				window.draw(player.getBoundingRect());
+
+				// Draw the NPC's Current Bounding Rect
+				window.draw(npc.getBoundingRect());
+			}
+
+			window.draw(debugText);
+#endif // _DEBUG
+		}
 
 
 		// Update the window
