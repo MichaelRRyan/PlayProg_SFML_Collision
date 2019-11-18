@@ -372,12 +372,14 @@ int main()
 					case Shapes::Circle:
 						m_selectedShape = Shapes::Ray;
 						ray.setStartPoint({ 400.0f, 300.0f });
+						ray.setColor(sf::Color::Green);
 						break;
 					case Shapes::Ray:
 						m_selectedShape = Shapes::Rectangle;
 						player.getBoundingRect().setOutlineThickness(-4.0f);
 						player.getBoundingRect().setFillColor(sf::Color::Transparent);
 
+						ray.setColor(sf::Color::White);
 						ray.setStartPoint({ 500.0f, 100.0f });
 						ray.setEndPoint({ 600.0f, 200.0f });
 						collisionRay.p = { ray.getStartPoint().x, ray.getStartPoint().y };
@@ -573,10 +575,10 @@ int main()
 
 			if (m_selectedShape == Shapes::Circle)
 			{
-				window.draw(circleShape);
 				window.draw(stationaryCircleShape);
+				window.draw(circleShape);
 			}
-			else if (m_selectedShape == Shapes::Ray)
+			if (m_selectedShape == Shapes::Ray)
 			{
 				window.draw(stationaryCircleShape);
 			}
