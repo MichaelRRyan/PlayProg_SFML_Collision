@@ -6,10 +6,16 @@
 class Jumping : public State
 {
 public:
-	Jumping() {};
+	Jumping();
 	~Jumping() {};
-	void idle(PlayerFSM* a);
+
+	void handleInput(PlayerFSM* a, AnimatedSprite* t_animatedSprite, Input t_input);
+	void update(PlayerFSM* a, AnimatedSprite* t_animatedSprite);
+
+	void falling(PlayerFSM* a);
 	void climbing(PlayerFSM* a);
+private:
+	sf::Clock m_clock;
 };
 
 #endif // !IDLE_H

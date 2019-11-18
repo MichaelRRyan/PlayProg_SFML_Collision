@@ -1,21 +1,20 @@
-#ifndef IDLE_H
-#define IDLE_H
+#ifndef WALKING_H
+#define WALKING_H
 
-#include <State.h>
+#include "State.h"
 
-class Idle : public State
+class Walking : public State
 {
 public:
-	Idle() {};
-	~Idle() {};
+	Walking() {};
+	~Walking() {};
 
 	void handleInput(PlayerFSM* a, AnimatedSprite* t_animatedSprite, Input t_input);
 	void update(PlayerFSM* a, AnimatedSprite* t_animatedSprite);
 
 	void jumping(PlayerFSM* a);
-	void climbing(PlayerFSM* a);
-	void walking(PlayerFSM* a);
+	void idle(PlayerFSM* a);
 	void falling(PlayerFSM* a);
 };
 
-#endif // !IDLE_H
+#endif // !WALKING_H

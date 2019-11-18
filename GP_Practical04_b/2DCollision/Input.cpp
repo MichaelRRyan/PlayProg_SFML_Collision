@@ -2,14 +2,16 @@
 
 Input::Input() 
 {
-	m_current = IDLE;
+	setAllFalse();
 }
 Input::~Input() {}
 
-void Input::setCurrent(Action a) {
-	m_current = a;
-}
-
-Input::Action Input::getCurrent() {
-	return m_current;
+void Input::setAllFalse()
+{
+	m_up = false;
+	m_upPressed = false;
+	m_down = false;
+	m_left = false;
+	m_right = false;
+	m_spacePressed = false;
 }

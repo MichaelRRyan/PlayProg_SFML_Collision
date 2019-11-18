@@ -18,14 +18,24 @@ State* PlayerFSM::getCurrent()
 	return m_current;
 }
 
-void PlayerFSM::setPrevious(State* s)
+//void PlayerFSM::setPrevious(State* s)
+//{
+//	m_previous = s;
+//}
+
+//State* PlayerFSM::getPrevious()
+//{
+//	return m_previous;
+//}
+
+void PlayerFSM::handleInput(AnimatedSprite *t_animatedSprite, Input t_input)
 {
-	m_previous = s;
+	m_current->handleInput(this, t_animatedSprite, t_input); // Handle state input
 }
 
-State* PlayerFSM::getPrevious()
+void PlayerFSM::update(AnimatedSprite* t_animatedSprite)
 {
-	return m_previous;
+	m_current->update(this, t_animatedSprite); // Update the state
 }
 
 void PlayerFSM::idle()
@@ -41,4 +51,19 @@ void PlayerFSM::jumping()
 void PlayerFSM::climbing()
 {
 	m_current->climbing(this);
+}
+
+void PlayerFSM::walking()
+{
+	m_current->walking(this);
+}
+
+void PlayerFSM::falling()
+{
+	m_current->falling(this);
+}
+
+void PlayerFSM::landing()
+{
+	m_current->landing(this);
 }

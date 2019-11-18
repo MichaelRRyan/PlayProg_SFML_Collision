@@ -8,15 +8,21 @@
 
 class Player : public GameObject
 {
+private:
+	PlayerFSM m_state;
+	AnimatedSprite m_animated_sprite;
+	sf::Clock m_clock;
+	Player();
 
 public:
-	Player();
-	~Player();
 	Player(const AnimatedSprite&);
+	~Player();
 	AnimatedSprite& getAnimatedSprite();
-	sf::RectangleShape &getBoundingRect();
-	void handleInput(Input);
+	sf::RectangleShape& getBoundingRect();
+	void handleInput(Input t_input);
 	void update();
+	void setPosition(sf::Vector2f t_position);
+	sf::Vector2f getPositon();
 };
 
 #endif // !PLAYER_H

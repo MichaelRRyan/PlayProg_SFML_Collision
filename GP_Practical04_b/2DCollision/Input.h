@@ -1,23 +1,19 @@
 #ifndef INPUT_H
 #define INPUT_H
+
 class Input
 {
 public:
 	Input();
 	~Input();
 
-	enum Action
-	{
-		IDLE,
-		UP,
-		LEFT,
-		RIGHT
-	};
+	void setAllFalse();
 
-	void setCurrent(Action);
-	Action getCurrent();
-
-private:
-	Action m_current;
+	bool m_up;
+	bool m_upPressed;
+	bool m_down;
+	bool m_left;
+	bool m_right;
+	bool m_spacePressed;
 };
 #endif

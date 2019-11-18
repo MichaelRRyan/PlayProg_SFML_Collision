@@ -21,7 +21,9 @@
   <ItemGroup>
     <ClInclude Include="AABBShape.h" />
     <ClInclude Include="AnimatedSprite.h" />
+    <ClInclude Include="Falling.h" />
     <ClInclude Include="Game.h" />
+    <ClInclude Include="Landing.h" />
     <ClInclude Include="PlayerFSM.h" />
     <ClInclude Include="Climbing.h" />
     <ClInclude Include="Debug.h" />
@@ -35,12 +37,14 @@
     <ClInclude Include="Jumping.h" />
     <ClInclude Include="GameObject.h" />
     <ClInclude Include="State.h" />
+    <ClInclude Include="Walking.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="AABBShape.cpp" />
     <ClCompile Include="AnimatedSprite.cpp" />
+    <ClCompile Include="Falling.cpp" />
     <ClCompile Include="Game.cpp" />
-    <ClCompile Include="PlayerFSM.cpp" />
+    <ClCompile Include="Landing.cpp" />
     <ClCompile Include="Climbing.cpp" />
     <ClCompile Include="GameObject.cpp" />
     <ClCompile Include="Idle.cpp" />
@@ -49,8 +53,10 @@
     <ClCompile Include="main.cpp" />
     <ClCompile Include="NPC.cpp" />
     <ClCompile Include="Player.cpp" />
+    <ClCompile Include="PlayerFSM.cpp" />
     <ClCompile Include="PolygonShape.cpp" />
     <ClCompile Include="RayLine.cpp" />
+    <ClCompile Include="Walking.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\README.md" />

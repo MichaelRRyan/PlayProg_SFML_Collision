@@ -79,12 +79,17 @@ public:
 	void update();
 
 private:
+	void setupTextures();
+	void setupSprites();
+	void setupAABBBounds();
+	void setupCollisionObjects();
 
 	// Create the main window
 	sf::RenderWindow window;
 
 	sf::Texture npc_texture;
 	sf::Texture player_texture;
+	sf::Texture m_playerRectTexture;
 
 	AnimatedSprite npc_animated_sprite;
 	AnimatedSprite player_animated_sprite;
@@ -102,7 +107,7 @@ private:
 	Capsule visualCapsule;
 	c2Capsule collisionCapsule;
 
-	PolygonShape polygonShape{ {300.0f, 100.0f}, {100.0f, 100.0f} };
+	PolygonShape polygonShape;
 
 	c2Poly collisionPolygon;
 
@@ -130,14 +135,7 @@ private:
 	sf::Font font;
 	sf::Text debugText;
 
-
-
-	void setupTextures();
-	void setupSprites();
-	void setupAABBBounds();
-	void setupCollisionObjects();
-
-	
+	bool upButtonDown;
 };
 
 #endif // !GAME_H

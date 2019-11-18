@@ -5,14 +5,15 @@ Game::Game() :
 	npc_animated_sprite(npc_texture),
 	player_animated_sprite(player_texture),
 	ray({ 500.0f, 100.0f }, { 600.0f, 200.0f }),
-	m_direction(0.707f, 0.707f)
+	m_direction(0.707f, 0.707f),
+	polygonShape{ {300.0f, 100.0f}, {100.0f, 100.0f} }
 {
 	setupTextures();
 	setupSprites();
 
 	npc = new NPC(npc_animated_sprite);
 	player = new Player(player_animated_sprite);
-	playerOffset = { player->getAnimatedSprite().getGlobalBounds().width / 2.0f, player->getAnimatedSprite().getGlobalBounds().height / 2.0f };
+	playerOffset = { 0.0f, player->getAnimatedSprite().getGlobalBounds().height / 2.0f };
 
 	setupAABBBounds();
 	setupCollisionObjects();
@@ -26,7 +27,12 @@ void Game::setupTextures()
 	}
 
 	// Load a mouse texture to display
-	if (!player_texture.loadFromFile("assets\\player.png")) {
+	if (!m_playerRectTexture.loadFromFile("assets\\player.png")) {
+		DEBUG_MSG("Failed to load file");
+	}
+
+	// Load a sprite to display
+	if (!player_texture.loadFromFile("assets\\sprites.png")) {
 		DEBUG_MSG("Failed to load file");
 	}
 }
@@ -41,13 +47,14 @@ void Game::setupSprites()
 	npc_animated_sprite.addFrame(sf::IntRect(343, 3, 84, 84));
 	npc_animated_sprite.addFrame(sf::IntRect(428, 3, 84, 84));
 
-	// Setup Players Default Animated Sprite
-	player_animated_sprite.addFrame(sf::IntRect(3, 3, 84, 84));
-	player_animated_sprite.addFrame(sf::IntRect(88, 3, 84, 84));
-	player_animated_sprite.addFrame(sf::IntRect(173, 3, 84, 84));
-	player_animated_sprite.addFrame(sf::IntRect(258, 3, 84, 84));
-	player_animated_sprite.addFrame(sf::IntRect(343, 3, 84, 84));
-	player_animated_sprite.addFrame(sf::IntRect(428, 3, 84, 84));
+	// Add all the textures
+	for (int row = 0; row < 6; row++)
+	{
+		for (int col = 0; col < 6; col++)
+		{
+			player_animated_sprite.addFrame(sf::IntRect(3 + (85 * col), 3 + (85 * row), 82, 82));
+		}
+	}
 }
 
 void Game::setupAABBBounds()
@@ -135,70 +142,88 @@ void Game::update()
 	while (window.isOpen())
 	{
 		// Move Sprite Follow Mouse
-		if (m_selectedShape == Shapes::Rectangle
-			|| m_gameState == GameState::BouncingRect)
+		if (m_gameState == GameState::CollisionTests)
 		{
-			player->getAnimatedSprite().setPosition(window.mapPixelToCoords(sf::Mouse::getPosition(window)) - playerOffset);
+			if (m_selectedShape == Shapes::Rectangle)
+			{
+				player->getAnimatedSprite().setPosition(window.mapPixelToCoords(sf::Mouse::getPosition(window)) - playerOffset);
 
+				// Update Player AABB
+				aabb_player.min = c2V(
+					player->getAnimatedSprite().getPosition().x - player->getAnimatedSprite().getGlobalBounds().width / 2.0f,
+					player->getAnimatedSprite().getPosition().y
+				);
+				aabb_player.max = c2V(
+					player->getAnimatedSprite().getPosition().x +
+					player->getAnimatedSprite().getGlobalBounds().width / 2.0f,
+					player->getAnimatedSprite().getPosition().y +
+					player->getAnimatedSprite().getGlobalBounds().height
+				);
+			}
+			else if (m_selectedShape == Shapes::Circle)
+			{
+				circleShape.setPosition(window.mapPixelToCoords(sf::Mouse::getPosition(window)));
+				collisionCircle.p = { circleShape.getPosition().x, circleShape.getPosition().y };
+			}
+			else if (m_selectedShape == Shapes::Ray)
+			{
+				ray.setEndPoint(window.mapPixelToCoords(sf::Mouse::getPosition(window)));
+				collisionRay.p = { ray.getStartPoint().x, ray.getStartPoint().y };
+				collisionRay.d = { ray.getDirection().x, ray.getDirection().y };
+				collisionRay.t = ray.getDistance();
+			}
+		}
+		else
+		{
 			// Update Player AABB
 			aabb_player.min = c2V(
-				player->getAnimatedSprite().getPosition().x,
+				player->getAnimatedSprite().getPosition().x - player->getAnimatedSprite().getGlobalBounds().width / 2.0f,
 				player->getAnimatedSprite().getPosition().y
 			);
 			aabb_player.max = c2V(
 				player->getAnimatedSprite().getPosition().x +
-				player->getAnimatedSprite().getGlobalBounds().width,
+				player->getAnimatedSprite().getGlobalBounds().width / 2.0f,
 				player->getAnimatedSprite().getPosition().y +
 				player->getAnimatedSprite().getGlobalBounds().height
 			);
-		}
-		else if (m_selectedShape == Shapes::Circle)
-		{
-			circleShape.setPosition(window.mapPixelToCoords(sf::Mouse::getPosition(window)));
-			collisionCircle.p = { circleShape.getPosition().x, circleShape.getPosition().y };
-		}
-		else if (m_selectedShape == Shapes::Ray)
-		{
-			ray.setEndPoint(window.mapPixelToCoords(sf::Mouse::getPosition(window)));
-			collisionRay.p = { ray.getStartPoint().x, ray.getStartPoint().y };
-			collisionRay.d = { ray.getDirection().x, ray.getDirection().y };
-			collisionRay.t = ray.getDistance();
+
+			// Move The NPC
+			sf::Sprite& npcSprite = npc->getAnimatedSprite();
+
+			if (npcSprite.getPosition().x < 0) {
+				m_direction.x *= -1;
+				npcSprite.setPosition(0.0f, npcSprite.getPosition().y);
+			}
+			else if (npcSprite.getPosition().x + npc->getAnimatedSprite().getGlobalBounds().width >= 800) {
+				m_direction.x *= -1;
+				npcSprite.setPosition(800 - npcSprite.getGlobalBounds().width, npcSprite.getPosition().y);
+			}
+			else if (npcSprite.getPosition().y < 0) {
+				m_direction.y *= -1;
+				npcSprite.setPosition(npcSprite.getPosition().x, 0.0f);
+			}
+			else if (npcSprite.getPosition().y + npc->getAnimatedSprite().getGlobalBounds().height >= 600) {
+				m_direction.y *= -1;
+				npcSprite.setPosition(npcSprite.getPosition().x, 600 - npcSprite.getGlobalBounds().height);
+			}
+
+			npc->getAnimatedSprite().move(m_direction * speed);
+
+			// Update NPC AABB set x and y
+			aabb_npc.min = c2V(
+				npc->getAnimatedSprite().getPosition().x,
+				npc->getAnimatedSprite().getPosition().y
+			);
+
+			aabb_npc.max = c2V(
+				npc->getAnimatedSprite().getPosition().x +
+				npc->getAnimatedSprite().getGlobalBounds().width,
+				npc->getAnimatedSprite().getPosition().y +
+				npc->getAnimatedSprite().getGlobalBounds().height
+			);
 		}
 
-		// Move The NPC
-		sf::Sprite& npcSprite = npc->getAnimatedSprite();
-
-		if (npcSprite.getPosition().x < 0) {
-			m_direction.x *= -1;
-			npcSprite.setPosition(0.0f, npcSprite.getPosition().y);
-		}
-		else if (npcSprite.getPosition().x + npc->getAnimatedSprite().getGlobalBounds().width >= 800) {
-			m_direction.x *= -1;
-			npcSprite.setPosition(800 - npcSprite.getGlobalBounds().width, npcSprite.getPosition().y);
-		}
-		else if (npcSprite.getPosition().y < 0) {
-			m_direction.y *= -1;
-			npcSprite.setPosition(npcSprite.getPosition().x, 0.0f);
-		}
-		else if (npcSprite.getPosition().y + npc->getAnimatedSprite().getGlobalBounds().height >= 600) {
-			m_direction.y *= -1;
-			npcSprite.setPosition(npcSprite.getPosition().x, 600 - npcSprite.getGlobalBounds().height);
-		}
-
-		npc->getAnimatedSprite().move(m_direction * speed);
-
-		// Update NPC AABB set x and y
-		aabb_npc.min = c2V(
-			npc->getAnimatedSprite().getPosition().x,
-			npc->getAnimatedSprite().getPosition().y
-		);
-
-		aabb_npc.max = c2V(
-			npc->getAnimatedSprite().getPosition().x +
-			npc->getAnimatedSprite().getGlobalBounds().width,
-			npc->getAnimatedSprite().getPosition().y +
-			npc->getAnimatedSprite().getGlobalBounds().height
-		);
+		input.setAllFalse();
 
 		// Process events
 		sf::Event event;
@@ -211,17 +236,17 @@ void Game::update()
 				window.close();
 				break;
 			case sf::Event::KeyPressed:
-				if (sf::Keyboard::isKeyPressed(sf::Keyboard::Left))
+				if (sf::Keyboard::Up == event.key.code)
 				{
-					input.setCurrent(Input::Action::LEFT);
+					if (!upButtonDown) // Check if the button was not already down
+					{
+						input.m_upPressed = true; // Sets the up button to true
+						upButtonDown = true; // Sets the up button to down position
+					}
 				}
-				else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Right))
+				if (sf::Keyboard::Space == event.key.code)
 				{
-					input.setCurrent(Input::Action::RIGHT);
-				}
-				else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Up))
-				{
-					input.setCurrent(Input::Action::UP);
+					input.m_spacePressed = true;
 				}
 
 				if (sf::Keyboard::D == event.key.code
@@ -303,10 +328,31 @@ void Game::update()
 					}
 				}
 				break;
-			default:
-				input.setCurrent(Input::Action::IDLE);
+			case sf::Event::KeyReleased:
+				if (sf::Keyboard::Up == event.key.code)
+				{
+					upButtonDown = false;
+				}
 				break;
 			}
+		}
+
+		// Gets the continuous keypress updates
+		if (sf::Keyboard::isKeyPressed(sf::Keyboard::Left))
+		{
+			input.m_left = true;
+		}
+		if (sf::Keyboard::isKeyPressed(sf::Keyboard::Right))
+		{
+			input.m_right = true;
+		}
+		if (sf::Keyboard::isKeyPressed(sf::Keyboard::Up))
+		{
+			input.m_up = true;
+		}
+		if (sf::Keyboard::isKeyPressed(sf::Keyboard::Down))
+		{
+			input.m_down = true;
 		}
 
 		// Handle input to Player
