@@ -1,5 +1,5 @@
 #include <iostream>
-#include <NPC.h>
+#include <npc.h>
 #include <Idle.h>
 #include <Debug.h>
 

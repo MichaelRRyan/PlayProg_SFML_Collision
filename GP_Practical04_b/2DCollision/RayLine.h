@@ -1,6 +1,7 @@
 #pragma once
 
 #include <SFML/Graphics.hpp>
+#include <tinyc2.h>
 
 class RayLine
 {

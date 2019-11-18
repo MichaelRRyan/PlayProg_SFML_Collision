@@ -19,7 +19,9 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="AABBShape.h" />
     <ClInclude Include="AnimatedSprite.h" />
+    <ClInclude Include="Game.h" />
     <ClInclude Include="PlayerFSM.h" />
     <ClInclude Include="Climbing.h" />
     <ClInclude Include="Debug.h" />
@@ -35,7 +37,9 @@
     <ClInclude Include="State.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="AABBShape.cpp" />
     <ClCompile Include="AnimatedSprite.cpp" />
+    <ClCompile Include="Game.cpp" />
     <ClCompile Include="PlayerFSM.cpp" />
     <ClCompile Include="Climbing.cpp" />
     <ClCompile Include="GameObject.cpp" />
