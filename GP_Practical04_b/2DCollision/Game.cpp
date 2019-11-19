@@ -17,6 +17,9 @@ Game::Game() :
 
 	setupAABBBounds();
 	setupCollisionObjects();
+
+	debugText.setFillColor(sf::Color::Black);
+	player->getAnimatedSprite().setPosition(400.0f, 300.0f);
 }
 
 void Game::setupTextures()
@@ -272,12 +275,14 @@ void Game::update()
 					case GameState::BouncingRect:
 						m_gameState = GameState::CollisionTests;
 						debugText.setString("Press M to switch between game states\nPress S to change selected shape");
+						debugText.setFillColor(sf::Color::White);
 						break;
 					case GameState::CollisionTests:
 						m_gameState = GameState::BouncingRect;
 						player->getBoundingRect().setOutlineThickness(-4.0f);
 						player->getBoundingRect().setFillColor(sf::Color::Transparent);
 						debugText.setString("Press M to switch between game states\nPress D to toggle through debug modes");
+						debugText.setFillColor(sf::Color::Black);
 						break;
 					}
 
@@ -297,12 +302,13 @@ void Game::update()
 
 						// Update Player AABB
 						aabb_player.min = c2V(
-							player->getAnimatedSprite().getPosition().x,
+							player->getAnimatedSprite().getPosition().x -
+							player->getAnimatedSprite().getGlobalBounds().width / 2.0f,
 							player->getAnimatedSprite().getPosition().y
 						);
 						aabb_player.max = c2V(
 							player->getAnimatedSprite().getPosition().x +
-							player->getAnimatedSprite().getGlobalBounds().width,
+							player->getAnimatedSprite().getGlobalBounds().width / 2.0f,
 							player->getAnimatedSprite().getPosition().y +
 							player->getAnimatedSprite().getGlobalBounds().height
 						);
@@ -355,14 +361,17 @@ void Game::update()
 			input.m_down = true;
 		}
 
-		// Handle input to Player
-		player->handleInput(input);
+		if (m_gameState == GameState::BouncingRect)
+		{
+			// Handle input to Player
+			player->handleInput(input);
 
-		// Update the Player
-		player->update();
+			// Update the Player
+			player->update();
 
-		// Update the Player
-		npc->update();
+			// Update the Player
+			npc->update();
+		}
 
 		// Check for collisions
 		if (m_gameState == GameState::CollisionTests)
@@ -510,58 +519,67 @@ void Game::update()
 			}
 		}
 
+		draw();
+	}
+}
+
+
+void Game::draw()
+{
+	if (m_gameState == GameState::CollisionTests)
+	{
 		// Clear screen
 		window.clear();
 
-		if (m_gameState == GameState::CollisionTests)
+		// Draw shapes
+		visualCapsule.draw(window);
+		polygonShape.draw(window);
+		ray.draw(window);
+		window.draw(player->getBoundingRect());
+
+		if (m_selectedShape == Shapes::Circle)
 		{
-			// Draw shapes
-			visualCapsule.draw(window);
-			polygonShape.draw(window);
-			ray.draw(window);
+			window.draw(stationaryCircleShape);
+			window.draw(circleShape);
+		}
+		if (m_selectedShape == Shapes::Ray)
+		{
+			window.draw(stationaryCircleShape);
+		}
+	}
+	else if (m_gameState == GameState::BouncingRect)
+	{
+		// Clear screen
+		window.clear(sf::Color::White);
+
+#ifdef _DEBUG
+		if (m_debugView != DebugView::BoundingOnly)
+#endif // _DEBUG
+		{
+			// Draw the Players Current Animated Sprite
+			window.draw(player->getAnimatedSprite());
+
+			// Draw the NPC's Current Animated Sprite
+			window.draw(npc->getAnimatedSprite());
+		}
+
+#ifdef _DEBUG
+		if (m_debugView == DebugView::BoundingOnly
+			|| m_debugView == DebugView::Debug)
+		{
+			// Draw the Player's Current Bounding Rect
 			window.draw(player->getBoundingRect());
 
-			if (m_selectedShape == Shapes::Circle)
-			{
-				window.draw(stationaryCircleShape);
-				window.draw(circleShape);
-			}
-			if (m_selectedShape == Shapes::Ray)
-			{
-				window.draw(stationaryCircleShape);
-			}
+			// Draw the NPC's Current Bounding Rect
+			window.draw(npc->getBoundingRect());
 		}
-		else if (m_gameState == GameState::BouncingRect)
-		{
-#ifdef _DEBUG
-			if (m_debugView != DebugView::BoundingOnly)
-#endif // _DEBUG
-			{
-				// Draw the Players Current Animated Sprite
-				window.draw(player->getAnimatedSprite());
-
-				// Draw the NPC's Current Animated Sprite
-				window.draw(npc->getAnimatedSprite());
-			}
-
-#ifdef _DEBUG
-			if (m_debugView == DebugView::BoundingOnly
-				|| m_debugView == DebugView::Debug)
-			{
-				// Draw the Player's Current Bounding Rect
-				window.draw(player->getBoundingRect());
-
-				// Draw the NPC's Current Bounding Rect
-				window.draw(npc->getBoundingRect());
-			}
 
 
 #endif // _DEBUG
-		}
-
-		window.draw(debugText);
-
-		// Update the window
-		window.display();
 	}
+
+	window.draw(debugText);
+
+	// Update the window
+	window.display();
 }

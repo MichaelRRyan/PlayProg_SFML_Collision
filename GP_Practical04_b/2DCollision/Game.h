@@ -83,6 +83,7 @@ private:
 	void setupSprites();
 	void setupAABBBounds();
 	void setupCollisionObjects();
+	void draw();
 
 	// Create the main window
 	sf::RenderWindow window;
